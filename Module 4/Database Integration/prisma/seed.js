@@ -1,6 +1,6 @@
 require('dotenv').config();
-const prisma = require('@prisma/client').PrismaClient;
-const client = new prisma();
+const { PrismaClient } = require('@prisma/client');
+const client = new PrismaClient();
 
 async function main() {
   // Stable IDs preserve the starter seed's authorId references.
@@ -39,6 +39,10 @@ async function main() {
       authorId: 1,
     },
   });
+
+  // Explicit seed IDs do not advance PostgreSQL SERIAL sequences automatically.
+  await client.$executeRaw`SELECT setval(pg_get_serial_sequence('"User"', 'id'), GREATEST((SELECT COALESCE(MAX(id), 1) FROM "User"), 1))`;
+  await client.$executeRaw`SELECT setval(pg_get_serial_sequence('"Post"', 'id'), GREATEST((SELECT COALESCE(MAX(id), 1) FROM "Post"), 1))`;
 }
 
 main()
