@@ -15,17 +15,27 @@ app.delete('/posts/:id', postController.remove);
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
 
-  // Preserve application validation errors while never exposing raw database errors.
-  const statusCode = Number.isInteger(error.statusCode) && error.statusCode >= 400 && error.statusCode < 500
+  let statusCode = Number.isInteger(error.statusCode) && error.statusCode >= 400 && error.statusCode < 500
     ? error.statusCode
     : 500;
+  let message = statusCode === 500 ? 'An unexpected error occurred' : error.message;
+
+  // Translate known database constraint failures without exposing raw DB messages.
+  if (error.code === 'P2002') {
+    statusCode = 409;
+    message = 'A record with these details already exists';
+  } else if (error.code === 'P2003') {
+    statusCode = 400;
+    message = 'A referenced resource does not exist';
+  } else if (error.code === 'P2025') {
+    statusCode = 404;
+    message = 'Resource not found';
+  }
+
   if (statusCode >= 500) {
     console.error('API request failed:', error.code || error.name || 'UnknownError');
   }
 
-  const message = statusCode === 500
-    ? 'An unexpected error occurred'
-    : error.message;
   return res.status(statusCode).json({ error: message });
 });
 
