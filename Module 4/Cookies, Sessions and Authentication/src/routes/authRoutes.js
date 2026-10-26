@@ -62,7 +62,8 @@ router.post('/logout', (req, res, next) => {
   try {
     const sessionId = req.signedCookies?.[COOKIE_NAME];
     if (sessionId) sessionStore.destroy(sessionId);
-    res.clearCookie(COOKIE_NAME, { ...cookieOptions, signed: true });
+    const { maxAge, ...clearOptions } = cookieOptions;
+    res.clearCookie(COOKIE_NAME, { ...clearOptions, signed: true });
     return res.status(204).end();
   } catch (error) {
     return next(error);
