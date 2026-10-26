@@ -1,36 +1,45 @@
-const seed = require('../data/postSeed');
+const prisma = require('../db/prisma');
 
-// Starter implementation: same async contract, temporary in-memory storage.
-const posts = seed.map((post) => ({ ...post }));
-let nextId = posts.reduce((max, post) => Math.max(max, post.id), 0) + 1;
-
+// Preserve the repository contract; Prisma-specific vocabulary stays here.
 async function findAll() {
-  return posts.map((post) => ({ ...post }));
+  return prisma.post.findMany({ orderBy: { id: 'asc' } });
 }
 
 async function findById(id) {
-  return posts.find((post) => post.id === Number(id)) || null;
+  return prisma.post.findUnique({ where: { id: Number(id) } });
 }
 
 async function create(fields) {
-  const post = { id: nextId++, title: fields.title, body: fields.body || '', authorId: fields.authorId };
-  posts.push(post);
-  return { ...post };
+  const data = {
+    title: fields.title,
+    body: fields.body || '',
+  };
+  if (fields.authorId !== undefined && fields.authorId !== null) {
+    data.authorId = Number(fields.authorId);
+  }
+  return prisma.post.create({ data });
 }
 
 async function update(id, patch) {
-  const post = posts.find((candidate) => candidate.id === Number(id));
-  if (!post) return null;
-  if (patch.title !== undefined) post.title = patch.title;
-  if (patch.body !== undefined) post.body = patch.body;
-  return { ...post };
+  const numericId = Number(id);
+  const data = {};
+  if (patch.title !== undefined) data.title = patch.title;
+  if (patch.body !== undefined) data.body = patch.body;
+
+  // updateMany provides the repository's null-on-missing contract.
+  const result = await prisma.post.updateMany({
+    where: { id: numericId },
+    data,
+  });
+  if (result.count === 0) return null;
+  return prisma.post.findUnique({ where: { id: numericId } });
 }
 
 async function remove(id) {
-  const index = posts.findIndex((post) => post.id === Number(id));
-  if (index === -1) return false;
-  posts.splice(index, 1);
-  return true;
+  const result = await prisma.post.deleteMany({
+    where: { id: Number(id) },
+  });
+  return result.count > 0;
 }
 
 module.exports = { findAll, findById, create, update, remove };

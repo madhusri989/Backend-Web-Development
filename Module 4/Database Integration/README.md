@@ -1,21 +1,28 @@
-# Database Integration Assignment Starter
+# Database Integration
 
-Replace the in-memory repository implementation with PostgreSQL through Prisma. The starter already uses an asynchronous repository contract so services and controllers can remain stable during the swap.
+The API keeps its existing HTTP contract while the post repository uses PostgreSQL through Prisma. Prisma-specific calls are isolated to `src/repositories/` and the shared client module.
 
-## Run
+## Local setup
 
-```bash
-npm install
-npm start
-```
+1. Install PostgreSQL and create a development database, for example `createdb community_dev`.
+2. Copy `.env.example` to `.env` and set `DATABASE_URL` to your local PostgreSQL credentials. Never commit `.env`.
+3. From this directory, run:
 
-## Prisma preparation
+   ```sh
+   npm install
+   npm run prisma:validate
+   npm run prisma:generate
+   npm run prisma:migrate
+   npm run prisma:seed
+   npm start
+   ```
 
-Copy `.env.example` to `.env` with a local PostgreSQL URL. The schema is intentionally incomplete for the assignment.
+The migration command creates and applies the named `init` migration. On an existing environment, use `npm run prisma:deploy` to apply committed migrations without creating new ones.
 
-```bash
-npm run prisma:format
-npm run prisma:validate
-```
+## Seed safety
 
-Read the platform question before editing. Do not add platform-only `question.md`, answer files, tests, or specs to this repository. Never commit `.env` or real credentials.
+The seed script uses upserts and is safe to run repeatedly. It creates a demo author and two example posts; it does not delete or reset existing data. Use a dedicated local development database for experimentation.
+
+## Verify the repository contract
+
+Exercise `GET /posts`, `GET /posts/1`, `GET /posts/999999`, `POST /posts`, `PATCH /posts/1`, `PATCH /posts/999999`, `DELETE /posts/1`, and `DELETE /posts/999999`. A duplicate vote or follow pair is rejected by a database uniqueness constraint. Public server errors return a generic message; detailed database errors are not sent to clients.
